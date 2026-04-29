@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Cyber Reader Core",
-  "description": "Motor de lectura PDF de ultra rendimiento (C++/Wasm)",
-  "version": "1.0.2",
+  "description": "Motor de lectura PDF de ultra rendimiento (C++/Wasm) - Ejecución Offline",
+  "version": "1.0.3",
   "permissions": [
     "offscreen",
     "storage",
