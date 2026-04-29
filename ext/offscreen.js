@@ -1,72 +1,53 @@
 /**
  * CYBER-READER - Wasm Kernel Host (Offscreen)
- * Versión 1.1.5 - Estabilidad Wasm Garantizada
+ * Versión 1.2.0 - Optimized Bridge
  */
+import createModule from '../build/engine.js';
 
-// Importamos el pegamento generado por Emscripten
-import '../build/engine.js';
-
+let kernel = null;
 let isWasmReady = false;
-let wasmInstance = null;
 
-/**
- * Inicialización asíncrona del Kernel C++
- */
-async function bootKernel() {
-    console.log("🧬 [KERNEL] Iniciando secuencia de arranque...");
-
+const initKernel = async () => {
     try {
-        /**
-         * En Manifest V3, el objeto 'Module' puede no ser global inmediatamente.
-         * Lo buscamos en el scope actual.
-         */
-        const createModule = (typeof Module !== 'undefined') ? Module : null;
-
-        if (!createModule) {
-            throw new Error("Factory 'Module' no detectada. Verifica que engine.js esté en /build/");
-        }
-
-        // Instanciación con mapeo de archivos para la extensión
-        wasmInstance = await createModule({
+        console.log("🧬 [KERNEL] Iniciando carga de memoria binaria...");
+        
+        kernel = await createModule({
             locateFile: (path) => {
                 if (path.endsWith('.wasm')) {
-                    // Ruta absoluta dentro de la extensión
                     return chrome.runtime.getURL('build/engine.wasm');
                 }
                 return path;
-            },
-            print: (text) => console.log(`[C++ STDOUT]: ${text}`),
-            printErr: (text) => console.error(`[C++ STDERR]: ${text}`)
+            }
         });
 
         isWasmReady = true;
-        console.log("✅ [KERNEL] C++ operativo y memoria lineal asignada.");
+        console.log("✅ [KERNEL] C++ instanciado y operativo.");
         
-        // Notificar al sistema que estamos listos
+        // Avisar a la UI que el motor está caliente
         chrome.runtime.sendMessage({ type: 'ENGINE_READY' });
 
-    } catch (error) {
-        console.error("❌ [KERNEL] Error crítico en el arranque:", error);
+    } catch (e) {
+        console.error("❌ [KERNEL] Error crítico de instanciación:", e);
     }
-}
+};
 
-// Ejecutar el arranque al cargar el documento
-bootKernel();
+// Autodisparo al cargar el documento
+initKernel();
 
 /**
- * ESCUCHA DE SEÑALES (BRIDGE)
+ * RECEPTOR DE SEÑALES
  */
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (msg.type === 'BOOT_ENGINE' || msg.target === 'offscreen') {
+    console.log("📩 [OFFSCREEN] Señal recibida:", msg.type);
+
+    if (msg.type === 'BOOT_ENGINE') {
         if (isWasmReady) {
-            sendResponse({ status: 'ready' });
-            // Re-confirmamos por si el popup se abrió después
             chrome.runtime.sendMessage({ type: 'ENGINE_READY' });
+            sendResponse({ status: 'already_running' });
         } else {
-            sendResponse({ status: 'loading' });
+            initKernel();
+            sendResponse({ status: 'initializing' });
         }
     }
-    
-    // Mantiene el canal abierto para respuestas asíncronas
     return true; 
 });
