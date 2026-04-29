@@ -1,36 +1,47 @@
 /**
- * CYBER-READER - UI Controller
+ * CYBER-READER - Control Panel
  */
 const statusLabel = document.getElementById('engine-status');
 const bootBtn = document.getElementById('process-btn');
 
-// Función para actualizar la UI
 const setStatus = (text, color) => {
     statusLabel.textContent = text;
     statusLabel.style.color = color;
 };
 
-// Escuchar mensajes del Kernel
+// Receptor de confirmación del Kernel
 chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === 'ENGINE_READY') {
-        console.log("🟢 UI: Kernel detectado.");
         setStatus('OPERATIONAL', '#00ff41');
+        bootBtn.textContent = 'EXECUTE SECURE CALC';
         bootBtn.style.borderColor = '#00ff41';
-        bootBtn.textContent = 'SYSTEM ONLINE';
+        console.log("🟢 [UI] Handshake completado.");
     }
 });
 
-// Evento de clic para despertar el motor
+// Acción del Botón
 bootBtn.addEventListener('click', () => {
-    console.log("📡 UI: Solicitando acceso al Kernel...");
-    setStatus('INITIALIZING...', '#f1c40f');
+    const currentState = statusLabel.textContent;
 
-    chrome.runtime.sendMessage({ type: 'BOOT_ENGINE' }, (response) => {
-        if (chrome.runtime.lastError) {
-            console.error("❌ UI: Error de puente:", chrome.runtime.lastError);
-            setStatus('BRIDGE_ERROR', '#ff4b2b');
-        } else {
-            console.log("🛰️ UI: Respuesta del puente:", response.status);
-        }
-    });
+    if (currentState === 'OFFLINE' || currentState === 'BRIDGE_ERROR') {
+        // Fase 1: Despertar el motor
+        setStatus('INITIALIZING...', '#f1c40f');
+        chrome.runtime.sendMessage({ type: 'BOOT_ENGINE' });
+    } 
+    else if (currentState === 'OPERATIONAL') {
+        // Fase 2: Ejecutar lógica en C++
+        const testValue = Math.floor(Math.random() * 100);
+        console.log(`📡 [UI] Enviando valor ${testValue} al Kernel...`);
+
+        chrome.runtime.sendMessage({ 
+            type: 'EXECUTE_CALC', 
+            payload: testValue 
+        }, (response) => {
+            if (response.success) {
+                alert(`🛡️ KERNEL RESPONSE\nEntrada: ${testValue}\nSalida C++: ${response.output}`);
+            } else {
+                console.error("❌ Error de cálculo:", response.error);
+            }
+        });
+    }
 });

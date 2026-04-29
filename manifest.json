@@ -1,42 +1,47 @@
 {
   "manifest_version": 3,
-  "name": "Cyber Reader Core",
-  "version": "1.0.8",
-  "description": "Kernel de análisis C++/Wasm de grado militar",
+  "name": "CYBER-READER Core",
+  "version": "2.0.0",
+  "description": "Kernel nativo C++/WASM para estudios de caso y gestión de subrayas persistentes.",
   "permissions": [
-    "sidePanel",
-    "offscreen",
     "storage",
-    "tabs"
+    "tabs",
+    "offscreen",
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Abrir Cyber Reader"
-  },
-  "side_panel": {
-    "default_path": "ext/popup.html"
-  },
-  "commands": {
-    "_execute_action": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+Y",
-        "mac": "Command+Shift+Y"
-      }
+    "default_popup": "ext/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     }
   },
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["ext/content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
   "web_accessible_resources": [
     {
-      "resources": ["build/*", "ext/*"],
+      "resources": [
+        "build/engine.wasm",
+        "build/engine.js"
+      ],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
 }

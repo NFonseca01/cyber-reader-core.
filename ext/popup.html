@@ -3,43 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyber Reader Core</title>
+    <title>Cyber-Reader Control Panel</title>
     <style>
-        :root { --glow: #00ff41; --bg: #0d0d0d; --panel: #1a1a1a; }
-        body { 
-            width: 350px; min-height: 500px; margin: 0; background: var(--bg); 
-            color: var(--glow); font-family: 'Courier New', monospace;
-            display: flex; flex-direction: column; padding: 15px; box-sizing: border-box;
+        :root {
+            --bg-color: #0a0b10;
+            --panel-bg: #14161f;
+            --accent-green: #00ff41; /* Matrix/Terminal Green */
+            --accent-yellow: #f1c40f;
+            --accent-red: #ff4141;
+            --text-main: #e0e0e0;
+            --text-dim: #888;
+            --border-style: 1px solid #333;
         }
-        .header { border-bottom: 2px solid var(--glow); padding-bottom: 10px; margin-bottom: 15px; }
-        .status-box { background: var(--panel); border: 1px solid #333; padding: 12px; margin-bottom: 15px; font-size: 0.85rem; }
-        #engine-status { color: #ff3e3e; font-weight: bold; }
-        button {
-            background: transparent; border: 1px solid var(--glow); color: var(--glow);
-            padding: 12px; cursor: pointer; text-transform: uppercase; font-weight: bold;
+
+        body {
+            width: 350px;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 15px;
+            overflow-x: hidden;
         }
-        button:hover { background: var(--glow); color: #000; box-shadow: 0 0 15px var(--glow); }
-        .log-container {
-            margin-top: 15px; flex-grow: 1; background: #050505; border: 1px solid #222;
-            padding: 10px; font-size: 0.75rem; overflow-y: auto; color: #008f11;
+
+        /* Header & Status */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: var(--border-style);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
+
+        .logo {
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: var(--accent-green);
+            font-size: 1.1rem;
+        }
+
+        .status-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        #engine-status {
+            color: var(--accent-red);
+            font-weight: bold;
+        }
+
+        /* Detection Zone */
+        #detection-zone {
+            background: var(--panel-bg);
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 3px solid var(--accent-green);
+            margin-bottom: 15px;
+        }
+
+        #doc-info {
+            font-size: 0.85rem;
+            margin: 0 0 10px 0;
+        }
+
+        /* Buttons */
+        .main-btn {
+            width: 100%;
+            background: transparent;
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+            padding: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .main-btn:hover:not(:disabled) {
+            background: rgba(0, 255, 65, 0.1);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+
+        .main-btn:disabled {
+            color: #555;
+            border-color: #555;
+            cursor: not-allowed;
+        }
+
+        .secondary-btn {
+            width: 100%;
+            background: var(--accent-green);
+            color: #000;
+            border: none;
+            padding: 8px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        /* Timeline / Notebook Area */
+        #notebook-area {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        h3 {
+            font-size: 0.9rem;
+            color: var(--accent-yellow);
+            margin: 15px 0 10px 0;
+            text-transform: uppercase;
+        }
+
+        .timeline-container {
+            background: #000;
+            border: var(--border-style);
+            height: 180px;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+        }
+
+        .timeline-entry {
+            border-bottom: 1px solid #222;
+            padding: 8px 0;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .timestamp {
+            color: var(--accent-yellow);
+            margin-right: 8px;
+        }
+
+        .empty-msg {
+            color: var(--text-dim);
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-10px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0a0b10; }
+        ::-webkit-scrollbar-thumb { background: #333; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-green); }
+
     </style>
 </head>
 <body>
-    <div class="header"><strong>CYBER-READER v1.0.9</strong></div>
-    
-    <div class="status-box">
-        KERNEL: <span id="engine-status">OFFLINE</span><br>
-        BUFFER: <span>1.54 MB (Wasm)</span><br>
-        MODE: <span>SANDBOXED_EXECUTION</span>
-    </div>
+    <header>
+        <span class="logo">CYBER-READER</span>
+        <div class="status-container">
+            <span id="engine-status">OFFLINE</span>
+        </div>
+    </header>
 
-    <button id="process-btn">BOOT KERNEL</button>
+    <section id="detection-zone">
+        <p id="doc-info">SYSTEM SCANNING...</p>
+        <button id="process-btn" class="main-btn" disabled>Inicializar Kernel</button>
+    </section>
 
-    <div class="log-container" id="console-log">
-        <div>System ready for initialization...</div>
-    </div>
+    <section id="notebook-area" style="display:none;">
+        <h3>📔 Case Timeline (Notebook)</h3>
+        <div id="timeline" class="timeline-container">
+            <p class="empty-msg">Waiting for user interaction...</p>
+        </div>
+        
+        <button id="convert-epub-btn" class="secondary-btn">GENERAR COPIA DE ESTUDIO (EPUB)</button>
+        <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 10px; text-align: center;">
+            Kernel: WASM-C++ Binary Logic enabled
+        </p>
+    </section>
 
-    <script type="module" src="popup.js"></script>
+    <script src="popup.js"></script>
 </body>
 </html>
