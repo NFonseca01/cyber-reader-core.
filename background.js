@@ -1,68 +1,70 @@
 /**
- * CYBER-READER CORE - Background Service Worker (MV3)
- * Gestiona la persistencia, el panel lateral y el ciclo de vida del motor.
+ * CYBER-READER CORE - Orchestrator (Background Service Worker)
+ * Maneja el ciclo de vida de la extensión y el ruteo de señales al motor Wasm.
  */
 
-// 1. Inicialización al instalar/actualizar
+// 1. Configuración al instalar o actualizar
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("Cyber-Reader Core: Sistema Operativo. Estado: Nominal.");
-  
-  // Configurar el panel lateral para que se abra al hacer clic en el icono
-  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
-    .catch((error) => console.error("Error en SidePanel Config:", error));
-});
-
-// 2. Gestión de Comunicación (Messaging Hub)
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  
-  // Caso A: Guardar marcador de última página (Persistence Layer)
-  if (message.type === "SAVE_MARKER") {
-    const { fileHash, lastPage } = message.payload;
-    chrome.storage.local.set({ [`marker_${fileHash}`]: lastPage }, () => {
-      sendResponse({ status: "success", timestamp: Date.now() });
-    });
-    return true; // Mantiene el canal abierto para respuesta asíncrona
-  }
-
-  // Caso B: Recuperar subrayados (Query a la DB Local)
-  if (message.type === "GET_ANNOTATIONS") {
-    chrome.storage.local.get(null, (items) => {
-      // Filtrar solo los objetos que sean subrayados (prefijo 'note_')
-      const timeline = Object.keys(items)
-        .filter(key => key.startsWith('note_'))
-        .map(key => items[key])
-        .sort((a, b) => b.createdAt - a.createdAt); // Orden cronológico inverso
-      
-      sendResponse({ payload: timeline });
-    });
-    return true;
-  }
-
-  // Caso C: Despertar al motor de conversión (Offscreen Document)
-  if (message.type === "START_CONVERSION") {
-    handleConversion(message.payload);
-  }
+    console.log("🛡️ Cyber-Reader: Kernel Orchestrator activado.");
+    
+    // Configura que el panel lateral se abra al hacer clic en el icono de la extensión
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
+        .catch((error) => console.error("Error en SidePanel Behavior:", error));
 });
 
 /**
- * Función para manejar tareas pesadas (C++/Wasm) fuera del Service Worker.
- * En MV3, el procesamiento de archivos se delega a un Offscreen Document 
- * para asegurar el ultra rendimiento sin bloquear el navegador.
+ * Función: ensureOffscreenContext
+ * Garantiza que el documento invisible (offscreen) donde reside el Wasm esté cargado.
  */
-async function handleConversion(data) {
-  // Crear el documento invisible si no existe
-  if (!(await chrome.offscreen.hasDocument?.())) {
-    await chrome.offscreen.createDocument({
-      url: 'ext/offscreen.html',
-      reasons: ['EXTERNAL_EVAL'], // Para cargar y ejecutar Wasm
-      justification: 'Conversión de PDF a EPUB mediante motor C++ Wasm'
+async function ensureOffscreenContext() {
+    const existingContexts = await chrome.runtime.getContexts({
+        contextTypes: ['OFFSCREEN_DOCUMENT']
     });
-  }
-  
-  // Enviar el buffer del PDF al motor
-  chrome.runtime.sendMessage({
-    target: 'offscreen',
-    type: 'PROCESS_BINARY',
-    payload: data
-  });
+
+    if (existingContexts.length > 0) {
+        return; // El motor ya tiene un host activo
+    }
+
+    // Si no existe, creamos el host para el motor C++
+    await chrome.offscreen.createDocument({
+        url: 'ext/offscreen.html',
+        reasons: ['WORKERS'],
+        justification: 'Instanciación de motor C++ para procesamiento de PDF de alto rendimiento'
+    });
+}
+
+/**
+ * Message Broker: Escucha y redirige mensajes
+ */
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // Solo procesamos mensajes dirigidos al motor (target: 'offscreen')
+    if (message.target === 'offscreen') {
+        
+        handleRouting(message);
+        
+        // Retornamos true para mantener el canal abierto si fuera necesario
+        return true; 
+    }
+});
+
+/**
+ * handleRouting: Asegura que el mensaje llegue al destino correcto
+ */
+async function handleRouting(message) {
+    try {
+        // Primero nos aseguramos de que el "laboratorio" (offscreen) esté abierto
+        await ensureOffscreenContext();
+        
+        // Reenviamos el mensaje original al contexto del offscreen
+        // Se usa un pequeño delay si es el arranque inicial para evitar race conditions
+        if (message.type === 'BOOT_ENGINE') {
+            setTimeout(() => {
+                chrome.runtime.sendMessage(message);
+            }, 150); 
+        } else {
+            chrome.runtime.sendMessage(message);
+        }
+    } catch (error) {
+        console.error("❌ Error en el ruteador del Kernel:", error);
+    }
 }

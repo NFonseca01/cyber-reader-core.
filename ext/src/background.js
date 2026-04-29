@@ -1,52 +1,73 @@
 /**
- * CYBER-READER CORE - Service Worker (Background)
- * Responsabilidades: Gestión de ciclo de vida y enrutamiento de mensajes.
+ * CYBER-READER CORE - Orchestrator (Background Service Worker)
+ * Este archivo gestiona el ciclo de vida de la extensión y el ruteo de mensajes.
  */
 
-// 1. Inicialización del comportamiento de la extensión
+// 1. Configuración inicial al instalar/actualizar
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("🛡️ Cyber Reader Core: Sistema inicializado.");
-  
-  // Configura el Panel Lateral para que se abra al hacer clic en el icono
-  if (chrome.sidePanel) {
+    console.log("🛡️ Cyber-Reader: Service Worker Activo.");
+    
+    // Configurar comportamiento del Side Panel (se abre al hacer clic en el icono)
     chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
-      .catch((error) => console.error("Fallo al configurar SidePanel:", error));
-  }
+        .catch((error) => console.error("Error configurando SidePanel:", error));
 });
 
-// 2. Orquestación del Offscreen Document (Host del motor Wasm)
-async function setupOffscreen() {
-  const existingContexts = await chrome.runtime.getContexts({
-    contextTypes: ['OFFSCREEN_DOCUMENT']
-  });
+/**
+ * Función Crítica: Garantiza que el documento Offscreen esté vivo.
+ * El Offscreen es el único lugar donde vive el motor C++/Wasm.
+ */
+async function ensureOffscreenExists() {
+    const existingContexts = await chrome.runtime.getContexts({
+        contextTypes: ['OFFSCREEN_DOCUMENT']
+    });
 
-  if (existingContexts.length > 0) return;
+    if (existingContexts.length > 0) {
+        console.log("📡 Contexto Offscreen ya existe.");
+        return;
+    }
 
-  await chrome.offscreen.createDocument({
-    url: 'ext/offscreen.html',
-    reasons: ['WORKERS'], // Necesario para la carga de módulos Wasm
-    justification: 'Instanciación del motor C++ para procesamiento de alta velocidad'
-  });
-  console.log("🚀 Entorno Offscreen desplegado.");
+    console.log("🚀 Creando nuevo documento Offscreen...");
+    await chrome.offscreen.createDocument({
+        url: 'ext/offscreen.html',
+        reasons: ['WORKERS'], // Necesario para cargar módulos Wasm
+        justification: 'Instanciación de motor C++ para procesamiento de alto rendimiento offline'
+    });
 }
 
-// 3. Activación por clic (Respaldo del SidePanel y arranque del motor)
-chrome.action.onClicked.addListener(async () => {
-  await setupOffscreen();
-});
-
-// 4. Bus de Mensajería (Proxy entre UI y Motor C++)
+/**
+ * Bus de Mensajería: El puente entre la UI (Popup) y el Motor (Offscreen).
+ */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Enrutamiento: Si el mensaje va dirigido al motor (offscreen)
-  if (message.target === 'offscreen') {
-    handleOffscreenRouting(message);
-  }
-  
-  // Mantenemos el canal abierto para respuestas asíncronas
-  return true; 
+    // Si el mensaje tiene como destino el motor (target: 'offscreen')
+    if (message.target === 'offscreen') {
+        
+        // Ejecutamos la lógica de enrutamiento de forma asíncrona
+        handleOffscreenRouting(message);
+        
+        // Retornamos true para indicar que la respuesta será asíncrona
+        return true; 
+    }
+    
+    // Aquí puedes añadir otros listeners (ej. guardar datos en storage)
 });
 
+/**
+ * Asegura el envío del mensaje al motor incluso si el Offscreen estaba dormido.
+ */
 async function handleOffscreenRouting(message) {
-  await setupOffscreen();
-  chrome.runtime.sendMessage(message);
+    try {
+        await ensureOffscreenExists();
+        
+        // Pequeño delay para asegurar que el DOM del offscreen cargó el JS
+        // Solo necesario en la primera llamada de arranque
+        if (message.type === 'BOOT_ENGINE') {
+            setTimeout(() => {
+                chrome.runtime.sendMessage(message);
+            }, 200);
+        } else {
+            chrome.runtime.sendMessage(message);
+        }
+    } catch (error) {
+        console.error("❌ Error en el ruteador de mensajes:", error);
+    }
 }
