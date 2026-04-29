@@ -1,35 +1,42 @@
 {
   "manifest_version": 3,
   "name": "Cyber Reader Core",
-  "description": "Motor de lectura PDF de ultra rendimiento (C++/Wasm) - Ejecución Offline",
-  "version": "1.0.3",
+  "version": "1.0.8",
+  "description": "Kernel de análisis C++/Wasm de grado militar",
   "permissions": [
+    "sidePanel",
     "offscreen",
     "storage",
-    "sidePanel"
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
-  "side_panel": {
-    "default_path": "ext/popup.html"
-  },
   "action": {
     "default_title": "Abrir Cyber Reader"
   },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "build/engine.js",
-        "build/engine.wasm"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
+  "side_panel": {
+    "default_path": "ext/popup.html"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      }
     }
-  ],
+  },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["build/*", "ext/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
