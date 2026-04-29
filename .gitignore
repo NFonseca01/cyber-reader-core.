@@ -1,0 +1,15 @@
+# Binarios y compilados
+build/
+bin/
+*.wasm
+*.js.mem
+
+# Sistema y editores
+.DS_Store
+.vscode/
+.idea/
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-error.log*

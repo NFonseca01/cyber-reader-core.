@@ -1,0 +1,26 @@
+cyber-reader/
+├── build/                      # Binarios compilados (.wasm, .js de pegamento)
+├── docs/                       # Documentación técnica y especificaciones de la API
+├── ext/                        # CÓDIGO DE LA EXTENSIÓN (Frontend)
+│   ├── manifest.json           # Manifiesto V3
+│   ├── icons/                  # Activos visuales (Cyberpunk icons)
+│   ├── src/
+│   │   ├── popup/              # Interfaz de usuario (HTML/CSS/JS)
+│   │   ├── sidebar/            # El panel cronológico de subrayados
+│   │   ├── background.js       # Service Worker (gestión de eventos)
+│   │   └── content.js          # Inyección en pestañas
+│   └── lib/                    # Librerías JS (Epub.js, PDF.js)
+├── src/                        # MOTOR DE RENDIMIENTO (Backend C++)
+│   ├── core/                   # Lógica de conversión PDF -> EPUB
+│   │   ├── converter.cpp
+│   │   ├── parser.hpp
+│   │   └── formatter.cpp
+│   ├── database/               # Lógica de SQLite/Wasm para subrayados
+│   │   └── db_manager.cpp
+│   └── bindings/               # Emscripten Glue (conecta C++ con JS)
+│       └── wasm_interface.cpp
+├── tests/                      # Unit testing (Python/C++)
+├── tools/                      # Scripts de automatización (Python para el build)
+├── CMakeLists.txt              # Configuración de compilación para C++
+├── Makefile                    # Comandos rápidos (make build, make clean)
+└── README.md                   # Instrucciones de despliegue y monetización

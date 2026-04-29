@@ -1,0 +1,55 @@
+cmake_minimum_required(VERSION 3.15)
+project(CyberReaderCore VERSION 1.0.0)
+
+# 1. Configuraciones de Estándar C++ (Ultra rendimiento)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXECUTABLE_SUFFIX ".js") # Emscripten genera .js + .wasm
+
+# 2. Detección de Emscripten
+if(EMSCRIPTEN)
+    message(STATUS "Configurando build para WebAssembly (Emscripten)")
+    
+    # Flags de compilación para el motor Wasm
+    add_compile_options(-O3 -msimd128) # -msimd128 para vectorización en CPU modernas
+    
+    # Flags del Linker (La "magia" de los bindings y memoria)
+    add_link_options(
+        "--bind"                              # Habilita Embind
+        "-s" "WASM=1"                         # Genera .wasm
+        "-s" "ALLOW_MEMORY_GROWTH=1"          # Dinamismo para archivos PDF grandes
+        "-s" "MODULARIZE=1"                   # Exporta como módulo JS
+        "-s" "EXPORT_NAME='CyberEngineModule'"# Nombre del objeto en JS
+        "-s" "ENVIRONMENT=web,worker"         # Entorno de ejecución
+    )
+else()
+    message(WARNING "No se detectó Emscripten. Compilando para host nativo (CachyOS)")
+endif()
+
+# 3. Localización de dependencias (vcpkg o sistema)
+# Nota: MuPDF y SQLite deben estar disponibles en el sysroot de Emscripten
+find_package(sqlite3 REQUIRED)
+
+# 4. Definición del Target
+add_executable(cyber_engine 
+    src/bindings/wasm_interface.cpp
+    src/core/formatter.cpp
+    src/database/db_manager.cpp
+)
+
+# 5. Inclusión de directorios (Headers)
+target_include_directories(cyber_engine PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/database
+)
+
+# 6. Vinculación de Librerías
+target_link_libraries(cyber_engine PRIVATE sqlite3)
+
+# 7. Post-Build: Mover archivos a la carpeta de la extensión
+add_custom_command(TARGET cyber_engine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/build
+    COMMAND ${CMAKE_COMMAND} -E copy cyber_engine.js ${CMAKE_CURRENT_SOURCE_DIR}/build/engine.js
+    COMMAND ${CMAKE_COMMAND} -E copy cyber_engine.wasm ${CMAKE_CURRENT_SOURCE_DIR}/build/engine.wasm
+    COMMENT "Desplegando binarios Wasm en /build para la extensión"
+)

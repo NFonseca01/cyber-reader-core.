@@ -1,0 +1,60 @@
+/**
+ * CYBER-READER CORE - Content Script
+ * Misión: Intercepción de documentos y gestión de eventos del DOM.
+ */
+
+// 1. Detector de PDF en la página
+const isPDF = () => {
+    return document.contentType === 'application/pdf' || 
+           window.location.pathname.endsWith('.pdf');
+};
+
+// 2. Inyector de Interfaz (Opcional: Si no quieres usar el SidePanel)
+const injectCyberHUD = () => {
+    console.log("Cyber-Reader: Inyectando capa de análisis...");
+    // Aquí podrías crear un overlay amarillo neón sobre el visor de PDF
+};
+
+// 3. Capturador de Subrayados (The Annotation Sensor)
+document.addEventListener('mouseup', () => {
+    const selection = window.getSelection();
+    const selectedText = selection.toString().trim();
+
+    if (selectedText.length > 0) {
+        // Obtenemos metadatos básicos de la selección
+        const range = selection.getRangeAt(0);
+        
+        const annotation = {
+            type: "SAVE_NOTE",
+            payload: {
+                fileHash: btoa(window.location.href), // ID temporal basado en URL
+                text: selectedText,
+                createdAt: Date.now(),
+                pageHint: "Detecting..." // En PDFs nativos es complejo sin PDF.js
+            }
+        };
+
+        // Enviamos el subrayado al Background para persistencia
+        chrome.runtime.sendMessage(annotation, (response) => {
+            console.log("Subrayado sincronizado con el cronograma local.");
+        });
+    }
+});
+
+// 4. Listener para mensajes desde el Motor (Wasm) o el Popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === "HIGHLIGHT_TEXT") {
+        // Lógica para resaltar visualmente texto ya guardado
+        applyHighlight(request.payload.text);
+    }
+});
+
+function applyHighlight(text) {
+    // Implementación de búsqueda y resaltado en el DOM
+    // Nota: En PDFs renderizados por Chrome esto requiere manipulación del Shadow DOM
+}
+
+// Inicialización silenciosa
+if (isPDF()) {
+    console.log("Cyber-Reader: Documento detectado. Listo para escalada de privilegios.");
+}
