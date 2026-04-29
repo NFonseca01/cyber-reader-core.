@@ -1,46 +1,72 @@
-import '../build/engine.js'; CyberEngineModule().then(M => { console.log('✅ Motor C++ operativo'); window.engine = new M.CyberEngine(); });
 /**
- * CYBER-READER CORE - Wasm Kernel Host
+ * CYBER-READER - Wasm Kernel Host (Offscreen)
+ * Versión 1.1.5 - Estabilidad Wasm Garantizada
  */
+
+// Importamos el pegamento generado por Emscripten
 import '../build/engine.js';
 
-let wasmLoaded = false;
+let isWasmReady = false;
+let wasmInstance = null;
 
-// Verificamos el nombre del módulo generado por Emscripten
-// Si en tu build.js dice 'var Module = ...', usa Module.
-const startWasm = typeof CyberEngineModule !== 'undefined' ? CyberEngineModule : Module;
+/**
+ * Inicialización asíncrona del Kernel C++
+ */
+async function bootKernel() {
+    console.log("🧬 [KERNEL] Iniciando secuencia de arranque...");
 
-if (startWasm) {
-  startWasm({
-    locateFile: (path) => {
-      if (path.endsWith('.wasm')) {
-        return chrome.runtime.getURL('build/engine.wasm');
-      }
-      return path;
+    try {
+        /**
+         * En Manifest V3, el objeto 'Module' puede no ser global inmediatamente.
+         * Lo buscamos en el scope actual.
+         */
+        const createModule = (typeof Module !== 'undefined') ? Module : null;
+
+        if (!createModule) {
+            throw new Error("Factory 'Module' no detectada. Verifica que engine.js esté en /build/");
+        }
+
+        // Instanciación con mapeo de archivos para la extensión
+        wasmInstance = await createModule({
+            locateFile: (path) => {
+                if (path.endsWith('.wasm')) {
+                    // Ruta absoluta dentro de la extensión
+                    return chrome.runtime.getURL('build/engine.wasm');
+                }
+                return path;
+            },
+            print: (text) => console.log(`[C++ STDOUT]: ${text}`),
+            printErr: (text) => console.error(`[C++ STDERR]: ${text}`)
+        });
+
+        isWasmReady = true;
+        console.log("✅ [KERNEL] C++ operativo y memoria lineal asignada.");
+        
+        // Notificar al sistema que estamos listos
+        chrome.runtime.sendMessage({ type: 'ENGINE_READY' });
+
+    } catch (error) {
+        console.error("❌ [KERNEL] Error crítico en el arranque:", error);
     }
-  }).then((instance) => {
-    wasmLoaded = true;
-    console.log("🧬 Kernel Wasm instanciado y listo.");
-    // Opcional: guardar la instancia para uso futuro
-    // window.cyberKernel = new instance.CyberEngine();
-  }).catch(err => {
-    console.error("❌ Error cargando Wasm:", err);
-  });
-} else {
-  console.error("❌ No se encontró el objeto de inicialización de Emscripten.");
 }
 
-// Escuchar el handshake desde el Popup
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.target === 'offscreen' && msg.type === 'BOOT_ENGINE') {
-    const sendAck = () => {
-      if (wasmLoaded) {
-        chrome.runtime.sendMessage({ type: 'ENGINE_READY' });
-      } else {
-        // Si el .wasm de 1.5MB sigue cargando, reintentamos en breve
-        setTimeout(sendAck, 200);
-      }
-    };
-    sendAck();
-  }
+// Ejecutar el arranque al cargar el documento
+bootKernel();
+
+/**
+ * ESCUCHA DE SEÑALES (BRIDGE)
+ */
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.type === 'BOOT_ENGINE' || msg.target === 'offscreen') {
+        if (isWasmReady) {
+            sendResponse({ status: 'ready' });
+            // Re-confirmamos por si el popup se abrió después
+            chrome.runtime.sendMessage({ type: 'ENGINE_READY' });
+        } else {
+            sendResponse({ status: 'loading' });
+        }
+    }
+    
+    // Mantiene el canal abierto para respuestas asíncronas
+    return true; 
 });

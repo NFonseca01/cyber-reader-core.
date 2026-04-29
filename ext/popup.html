@@ -5,91 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cyber Reader Core</title>
     <style>
-        :root {
-            --glow: #00ff41;
-            --bg: #0d0d0d;
-            --panel: #1a1a1a;
-        }
+        :root { --glow: #00ff41; --bg: #0d0d0d; --panel: #1a1a1a; }
         body { 
-            width: 100%; 
-            height: 100vh; 
-            margin: 0;
-            background: var(--bg); 
-            color: var(--glow);
-            font-family: 'Courier New', Courier, monospace;
-            display: flex; 
-            flex-direction: column; 
-            padding: 15px; 
-            box-sizing: border-box;
-            border-left: 1px solid #333;
+            width: 350px; min-height: 500px; margin: 0; background: var(--bg); 
+            color: var(--glow); font-family: 'Courier New', monospace;
+            display: flex; flex-direction: column; padding: 15px; box-sizing: border-box;
         }
-        .header { 
-            border-bottom: 2px solid var(--glow); 
-            padding-bottom: 10px; 
-            margin-bottom: 15px;
-            text-shadow: 0 0 5px var(--glow);
-        }
-        .status-box { 
-            background: var(--panel);
-            border: 1px solid #333; 
-            padding: 12px; 
-            font-size: 0.85rem; 
-            margin-bottom: 15px;
-            line-height: 1.4;
-        }
-        .status-box span { font-weight: bold; }
-        #engine-status { color: #ff3e3e; }
-        #engine-status.active { color: var(--glow); }
-
+        .header { border-bottom: 2px solid var(--glow); padding-bottom: 10px; margin-bottom: 15px; }
+        .status-box { background: var(--panel); border: 1px solid #333; padding: 12px; margin-bottom: 15px; font-size: 0.85rem; }
+        #engine-status { color: #ff3e3e; font-weight: bold; }
         button {
-            background: transparent; 
-            border: 1px solid var(--glow); 
-            color: var(--glow);
-            padding: 12px; 
-            cursor: pointer; 
-            transition: all 0.2s ease;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            background: transparent; border: 1px solid var(--glow); color: var(--glow);
+            padding: 12px; cursor: pointer; text-transform: uppercase; font-weight: bold;
         }
-        button:hover { 
-            background: var(--glow); 
-            color: #000; 
-            box-shadow: 0 0 20px var(--glow); 
-        }
-        button:active { transform: scale(0.98); }
-
+        button:hover { background: var(--glow); color: #000; box-shadow: 0 0 15px var(--glow); }
         .log-container {
-            margin-top: 15px;
-            flex-grow: 1;
-            background: #050505;
-            border: 1px solid #222;
-            padding: 10px;
-            font-size: 0.75rem;
-            overflow-y: auto;
-            color: #008f11;
+            margin-top: 15px; flex-grow: 1; background: #050505; border: 1px solid #222;
+            padding: 10px; font-size: 0.75rem; overflow-y: auto; color: #008f11;
         }
-        .log-entry { margin-bottom: 4px; }
-        .log-entry::before { content: "> "; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <strong>CYBER-READER v1.0.2</strong>
-    </div>
+    <div class="header"><strong>CYBER-READER v1.0.9</strong></div>
     
     <div class="status-box">
         KERNEL: <span id="engine-status">OFFLINE</span><br>
-        BUFFER: <span id="mem-usage">1.54 MB (Wasm)</span><br>
+        BUFFER: <span>1.54 MB (Wasm)</span><br>
         MODE: <span>SANDBOXED_EXECUTION</span>
     </div>
 
     <button id="process-btn">BOOT KERNEL</button>
 
     <div class="log-container" id="console-log">
-        <div class="log-entry">System ready for initialization...</div>
+        <div>System ready for initialization...</div>
     </div>
 
-    <script src="popup.js"></script>
+    <script type="module" src="popup.js"></script>
 </body>
 </html>
